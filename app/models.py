@@ -189,3 +189,120 @@ class ItemCatalogo(Base):
         CheckConstraint("comision > 0", name="chkImporte"),
         CheckConstraint("subastado IN ('si', 'no')", name="chkSubastado"),
     )
+
+class Asistente(Base):
+    __tablename__ = "asistentes"
+
+    identificador = Column(Integer, primary_key=True, index=True)
+    numeroPostor = Column(Integer, nullable=False)
+    cliente = Column(Integer, ForeignKey("clientes.identificador"), nullable=False)
+    subasta = Column(Integer, ForeignKey("subastas.identificador"), nullable=False)
+
+class Pujo(Base):
+    __tablename__ = "pujos"
+
+    identificador = Column(Integer, primary_key=True, index=True)
+    assitente = Column(Integer, ForeignKey("asistentes.identificador"), nullable=False)
+    item = Column(Integer, ForeignKey("items_catalogo.identificador"), nullable=False)
+    importe = Column(Numeric(precision=18, scale=2), nullable=False)
+    ganador = Column(String, nullable=False, server_default="no")
+
+    __table_args__ = (
+        CheckConstraint("importe > 0.01", name="chkImporte"),
+        CheckConstraint("ganador IN ('si', 'no')", name="chkGanador"),
+    )
+
+class HistorialPujos(Base):
+    __tablename__ = "historial_pujos"
+
+    identificador = Column(Integer, primary_key=True, index=True)
+    pujo = Column(Integer, ForeignKey("pujos.identificador"), nullable=False)
+    asistente = Column(Integer, ForeignKey("asistentes.identificador"), nullable=False)
+    itemCatalogo = Column(Integer, ForeignKey("items_catalogo.identificador"), nullable=False)
+    cliente = Column(Integer, ForeignKey("clientes.identificador"), nullable=False)
+    subasta = Column(Integer, ForeignKey("subastas.identificador"), nullable=False)
+    importe = Column(Numeric(precision=18, scale=2), nullable=False)
+    fechaHora = Column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("importe > 0.01", name="chkImporte"),
+    )
+
+class RegistroSubasta(Base):
+    __tablename__ = "registro_subastas"
+
+    identificador = Column(Integer, primary_key=True, index=True)
+    subasta = Column(Integer, ForeignKey("subastas.identificador"), nullable=False)
+    duenio = Column(Integer, ForeignKey("duenios.identificador"), nullable=False)
+    producto = Column(Integer, ForeignKey("productos.identificador"), nullable=False)
+    cliente = Column(Integer, ForeignKey("clientes.identificador"), nullable=False)
+    importe = Column(Numeric(precision=18, scale=2), nullable=False)
+    comision = Column(Numeric(precision=18, scale=2), nullable=False)
+
+class MedioPago(Base):
+    __tablename__ = "medios_pago"
+
+    identificador = Column(Integer, primary_key=True, index=True)
+    cliente = Column(Integer, ForeignKey("clientes.identificador"), nullable=False)
+    tipo = Column(String, nullable=False)
+    estado = Column(String, nullable=False, server_default="pendiente")
+    moneda = Column(String, nullable=False, server_default="ARS")
+    es_internacional = Column(String, nullable=False, server_default="no")
+    descripcion = Column(String, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint("tipo IN ('cuenta_bancaria', 'tarjeta', 'cheque_certificado')", name="chkTipoPago"),
+        CheckConstraint("estado IN ('pendiente', 'verificado', 'rechazado')", name="chkEstadoPago"),
+        CheckConstraint("moneda IN ('ARS', 'USD')", name="chkMoneda"),
+        CheckConstraint("es_internacional IN ('si', 'no')", name="chkInternacional")
+    )
+
+class mpCuentaBancaria(Base):
+    __tablename__ = "mp_cuentas_bancarias"
+
+    medio_pago = Column(Integer, ForeignKey("medios_pago.identificador"), primary_key=True, index=True)
+    titular = Column(String, nullable=False)
+    banco = Column(String, nullable=False)
+    cbu = Column(String, nullable=False)
+    alias = Column(String, nullable=True)
+    pais_banco = Column(Integer, ForeignKey("paises.numero"), nullable=False)
+
+class mpTarjeta(Base):
+    __tablename__ = "mp_tarjetas"
+
+    medio_pago = Column(Integer, ForeignKey("medios_pago.identificador"), primary_key=True, index=True)
+    titular = Column(String, nullable=False)
+    ultimos_4_digitos = Column(String, nullable=False)
+    vencimiento = Column(Date, nullable=False)
+    marca = Column(String, nullable=False)
+    tipo_tarjeta = Column(String, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("marca IN ('VISA', 'MASTERCARD', 'AMEX')", name="chkMarca"),
+        CheckConstraint("tipo_tarjeta IN ('credito', 'debito')", name="chkTipoTarjeta"),
+    )
+
+class mpChequeCertificado(Base):
+    __tablename__ = "mp_cheques_certificados"
+
+    medio_pago = Column(Integer, ForeignKey("medios_pago.identificador"), primary_key=True, index=True)
+    banco = Column(String, nullable=False)
+    numero_cheque = Column(String, nullable=False)
+    monto = Column(Numeric(precision=18, scale=2), nullable=False)
+    monto_disponible = Column(Numeric(precision=18, scale=2), nullable=False)
+    observaciones = Column(String, nullable=True)
+
+class InspeccionProducto(Base):
+    __tablename__ = "inspeccion_productos"
+
+    identificador = Column(Integer, primary_key=True, index=True)
+    producto = Column(Integer, ForeignKey("productos.identificador"), nullable=False, unique=True)
+    estado = Column(String, nullable=False, server_default="pendiente")
+    observaciones = Column(String, nullable=True)
+    costo_devolucion = Column(Numeric(precision=18, scale=2), nullable=True)
+    fecha_ultima_actualizacion = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        CheckConstraint("estado IN ('pendiente', 'aprobado', 'rechazado')", name="chkEstadoInspeccion"),
+        CheckConstraint("costo_devolucion >= 0", name="chkCostoDevolucion"),
+    )
