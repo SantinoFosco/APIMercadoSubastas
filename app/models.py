@@ -63,7 +63,7 @@ class Seguro(Base):
     importe = Column(Numeric(precision=18, scale=2), nullable=False)
 
     __table_args__ = (
-        CheckConstraint("polizaCombinada IN ('si', 'no')", name="chkPoliza"),
+        CheckConstraint("\"polizaCombinada\" IN ('si', 'no')", name="chkPoliza"),
         CheckConstraint("importe > 0", name="chkImporte"),
     )
 
@@ -92,9 +92,9 @@ class Duenio(Base):
     verificador = Column(Integer, ForeignKey("empleados.identificador"), nullable=False)
 
     __table_args__ = (
-        CheckConstraint("verificacionFinanciera IN ('si', 'no')", name="chkVF"),
-        CheckConstraint("verificacionJudicial IN ('si', 'no')", name="chkVJ"),
-        CheckConstraint("calificacionRiesgo IN (1, 2, 3, 4, 5, 6)", name="chkCR"),
+        CheckConstraint("\"verificacionFinanciera\" IN ('si', 'no')", name="chkVF"),
+        CheckConstraint("\"verificacionJudicial\" IN ('si', 'no')", name="chkVJ"),
+        CheckConstraint("\"calificacionRiesgo\" IN (1, 2, 3, 4, 5, 6)", name="chkCR"),
     )
 
 class Subastador(Base):
@@ -111,7 +111,7 @@ class Subasta(Base):
     fecha = Column(Date, nullable=False)
     hora = Column(Time, nullable=False)
     estado = Column(String, nullable=False, server_default="abierta")
-    subastador = Column(Integer, nullable=False, ForeignKey="subastadores.identificador")
+    subastador = Column(Integer, ForeignKey("subastadores.identificador"), nullable=False)
     ubicacion = Column(String, nullable=True)
     capacidadAsistentes = Column(Integer, nullable=True)
     tieneDeposito = Column(String, nullable=True)
@@ -121,8 +121,8 @@ class Subasta(Base):
     __table_args__ = (
         CheckConstraint("fecha > (CURRENT_DATE + INTERVAL '10 days')", name="chkFecha"),
         CheckConstraint("estado IN ('abierta', 'cerrada')", name="chkEstado"),
-        CheckConstraint("tieneDeposito IN ('si', 'no')", name="chkTD"),
-        CheckConstraint("seguridadPropia IN ('si', 'no')", name="chkSP"),
+        CheckConstraint("\"tieneDeposito\" IN ('si', 'no')", name="chkTD"),
+        CheckConstraint("\"seguridadPropia\" IN ('si', 'no')", name="chkSP"),
         CheckConstraint("categoria IN ('comun', 'especial', 'plata', 'oro', 'platino')", name="chkCategoria")
     )
 
@@ -162,7 +162,7 @@ class ProductoPresentacion(Base):
     imagenPrincipal = Column(Integer, ForeignKey("fotos.identificador"), nullable=True)
 
     __table_args__ = (
-        CheckConstraint("declaracionLegal IN ('si', 'no')", name="chkDL"),
+        CheckConstraint("\"declaracionLegal\" IN ('si', 'no')", name="chkDL"),
         CheckConstraint("estado IN ('borrador', 'completo', 'publicado')"),
     )
 
@@ -185,8 +185,8 @@ class ItemCatalogo(Base):
     subastado = Column(String, nullable=False, server_default="no")
 
     __table_args__ = (
-        CheckConstraint("precioBase > 0", name="chkImporte"),
-        CheckConstraint("comision > 0", name="chkImporte"),
+        CheckConstraint("\"precioBase\" > 0", name="chkPrecioBase"),
+        CheckConstraint("comision > 0", name="chkComision"),
         CheckConstraint("subastado IN ('si', 'no')", name="chkSubastado"),
     )
 

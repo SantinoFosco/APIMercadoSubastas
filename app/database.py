@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_client_engine # O la configuración que prefieras
+from sqlalchemy import create_engine # O la configuración que prefieras
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv

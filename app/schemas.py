@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import date
+from decimal import Decimal
 
 #------------------ Auth y Registro ------------------------#
 
@@ -15,6 +17,72 @@ class RegistroIniciarRequest(BaseModel):
     id_pais: int
 
 #------------------ Medios de pago -------------------------#
+
+class MedioPagoResponse(BaseModel):
+    identificador: int
+    cliente: int
+    tipo: str
+    estado: str
+    moneda: str
+    es_internacional: str
+    descripcion: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class CuentaBancariaCreate(BaseModel):
+    cliente: int
+    moneda: str = "ARS"
+    es_internacional: str = "no"
+    descripcion: Optional[str] = None
+    titular: str
+    banco: str
+    cbu: str
+    alias: Optional[str] = None
+    pais_banco: int
+
+class CuentaBancariaResponse(MedioPagoResponse):
+    titular: str
+    banco: str
+    cbu: str
+    alias: Optional[str] = None
+    pais_banco: int
+
+class TarjetaCreate(BaseModel):
+    cliente: int
+    moneda: str = "ARS"
+    es_internacional: str = "no"
+    descripcion: Optional[str] = None
+    titular: str
+    ultimos_4_digitos: str
+    vencimiento: date
+    marca: str
+    tipo_tarjeta: str
+
+class TarjetaResponse(MedioPagoResponse):
+    titular: str
+    ultimos_4_digitos: str
+    vencimiento: date
+    marca: str
+    tipo_tarjeta: str
+
+class ChequeCertificadoCreate(BaseModel):
+    cliente: int
+    moneda: str = "ARS"
+    es_internacional: str = "no"
+    descripcion: Optional[str] = None
+    banco: str
+    numero_cheque: str
+    monto: Decimal
+    monto_disponible: Decimal
+    observaciones: Optional[str] = None
+
+class ChequeCertificadoResponse(MedioPagoResponse):
+    banco: str
+    numero_cheque: str
+    monto: Decimal
+    monto_disponible: Decimal
+    observaciones: Optional[str] = None
 
 #------------------ Home y Catalogo ------------------------#
 
