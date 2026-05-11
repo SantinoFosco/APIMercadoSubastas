@@ -97,6 +97,224 @@ def estado_registro(db: Session, mail: str):
 
 #------------------ Medios de pago -------------------------#
 
+def get_medios_pago_cliente(db: Session, cliente_id: int):
+    return db.query(models.MedioPago).filter(
+        models.MedioPago.cliente == cliente_id
+    ).all()
+
+def delete_medio_pago(db: Session, medio_pago_id: int):
+    db_medio = db.query(models.MedioPago).filter(
+        models.MedioPago.identificador == medio_pago_id
+    ).first()
+    if db_medio:
+        db.delete(db_medio)
+        db.commit()
+    return db_medio
+
+def create_cuenta_bancaria(db: Session, request: schemas.CuentaBancariaCreate):
+    try:
+        nuevo_medio = models.MedioPago(
+            cliente=request.cliente,
+            tipo="cuenta_bancaria",
+            estado="pendiente",
+            moneda=request.moneda,
+            es_internacional=request.es_internacional,
+            descripcion=request.descripcion
+        )
+        db.add(nuevo_medio)
+        db.flush()
+
+        nueva_cuenta = models.mpCuentaBancaria(
+            medio_pago=nuevo_medio.identificador,
+            titular=request.titular,
+            banco=request.banco,
+            cbu=request.cbu,
+            alias=request.alias,
+            pais_banco=request.pais_banco
+        )
+        db.add(nueva_cuenta)
+        db.commit()
+        db.refresh(nuevo_medio)
+        db.refresh(nueva_cuenta)
+
+        return schemas.CuentaBancariaResponse(
+            identificador=nuevo_medio.identificador,
+            cliente=nuevo_medio.cliente,
+            tipo=nuevo_medio.tipo,
+            estado=nuevo_medio.estado,
+            moneda=nuevo_medio.moneda,
+            es_internacional=nuevo_medio.es_internacional,
+            descripcion=nuevo_medio.descripcion,
+            titular=nueva_cuenta.titular,
+            banco=nueva_cuenta.banco,
+            cbu=nueva_cuenta.cbu,
+            alias=nueva_cuenta.alias,
+            pais_banco=nueva_cuenta.pais_banco
+        )
+    except Exception as e:
+        db.rollback()
+        raise e
+
+def get_cuenta_bancaria(db: Session, medio_pago_id: int):
+    medio = db.query(models.MedioPago).filter(
+        models.MedioPago.identificador == medio_pago_id
+    ).first()
+    cuenta = db.query(models.mpCuentaBancaria).filter(
+        models.mpCuentaBancaria.medio_pago == medio_pago_id
+    ).first()
+    if not medio or not cuenta:
+        return None
+    return schemas.CuentaBancariaResponse(
+        identificador=medio.identificador,
+        cliente=medio.cliente,
+        tipo=medio.tipo,
+        estado=medio.estado,
+        moneda=medio.moneda,
+        es_internacional=medio.es_internacional,
+        descripcion=medio.descripcion,
+        titular=cuenta.titular,
+        banco=cuenta.banco,
+        cbu=cuenta.cbu,
+        alias=cuenta.alias,
+        pais_banco=cuenta.pais_banco
+    )
+
+def create_tarjeta(db: Session, request: schemas.TarjetaCreate):
+    try:
+        nuevo_medio = models.MedioPago(
+            cliente=request.cliente,
+            tipo="tarjeta",
+            estado="pendiente",
+            moneda=request.moneda,
+            es_internacional=request.es_internacional,
+            descripcion=request.descripcion
+        )
+        db.add(nuevo_medio)
+        db.flush()
+
+        nueva_tarjeta = models.mpTarjeta(
+            medio_pago=nuevo_medio.identificador,
+            titular=request.titular,
+            ultimos_4_digitos=request.ultimos_4_digitos,
+            vencimiento=request.vencimiento,
+            marca=request.marca,
+            tipo_tarjeta=request.tipo_tarjeta
+        )
+        db.add(nueva_tarjeta)
+        db.commit()
+        db.refresh(nuevo_medio)
+        db.refresh(nueva_tarjeta)
+
+        return schemas.TarjetaResponse(
+            identificador=nuevo_medio.identificador,
+            cliente=nuevo_medio.cliente,
+            tipo=nuevo_medio.tipo,
+            estado=nuevo_medio.estado,
+            moneda=nuevo_medio.moneda,
+            es_internacional=nuevo_medio.es_internacional,
+            descripcion=nuevo_medio.descripcion,
+            titular=nueva_tarjeta.titular,
+            ultimos_4_digitos=nueva_tarjeta.ultimos_4_digitos,
+            vencimiento=nueva_tarjeta.vencimiento,
+            marca=nueva_tarjeta.marca,
+            tipo_tarjeta=nueva_tarjeta.tipo_tarjeta
+        )
+    except Exception as e:
+        db.rollback()
+        raise e
+
+def get_tarjeta(db: Session, medio_pago_id: int):
+    medio = db.query(models.MedioPago).filter(
+        models.MedioPago.identificador == medio_pago_id
+    ).first()
+    tarjeta = db.query(models.mpTarjeta).filter(
+        models.mpTarjeta.medio_pago == medio_pago_id
+    ).first()
+    if not medio or not tarjeta:
+        return None
+    return schemas.TarjetaResponse(
+        identificador=medio.identificador,
+        cliente=medio.cliente,
+        tipo=medio.tipo,
+        estado=medio.estado,
+        moneda=medio.moneda,
+        es_internacional=medio.es_internacional,
+        descripcion=medio.descripcion,
+        titular=tarjeta.titular,
+        ultimos_4_digitos=tarjeta.ultimos_4_digitos,
+        vencimiento=tarjeta.vencimiento,
+        marca=tarjeta.marca,
+        tipo_tarjeta=tarjeta.tipo_tarjeta
+    )
+
+def create_cheque_certificado(db: Session, request: schemas.ChequeCertificadoCreate):
+    try:
+        nuevo_medio = models.MedioPago(
+            cliente=request.cliente,
+            tipo="cheque_certificado",
+            estado="pendiente",
+            moneda=request.moneda,
+            es_internacional=request.es_internacional,
+            descripcion=request.descripcion
+        )
+        db.add(nuevo_medio)
+        db.flush()
+
+        nuevo_cheque = models.mpChequeCertificado(
+            medio_pago=nuevo_medio.identificador,
+            banco=request.banco,
+            numero_cheque=request.numero_cheque,
+            monto=request.monto,
+            monto_disponible=request.monto_disponible,
+            observaciones=request.observaciones
+        )
+        db.add(nuevo_cheque)
+        db.commit()
+        db.refresh(nuevo_medio)
+        db.refresh(nuevo_cheque)
+
+        return schemas.ChequeCertificadoResponse(
+            identificador=nuevo_medio.identificador,
+            cliente=nuevo_medio.cliente,
+            tipo=nuevo_medio.tipo,
+            estado=nuevo_medio.estado,
+            moneda=nuevo_medio.moneda,
+            es_internacional=nuevo_medio.es_internacional,
+            descripcion=nuevo_medio.descripcion,
+            banco=nuevo_cheque.banco,
+            numero_cheque=nuevo_cheque.numero_cheque,
+            monto=nuevo_cheque.monto,
+            monto_disponible=nuevo_cheque.monto_disponible,
+            observaciones=nuevo_cheque.observaciones
+        )
+    except Exception as e:
+        db.rollback()
+        raise e
+
+def get_cheque_certificado(db: Session, medio_pago_id: int):
+    medio = db.query(models.MedioPago).filter(
+        models.MedioPago.identificador == medio_pago_id
+    ).first()
+    cheque = db.query(models.mpChequeCertificado).filter(
+        models.mpChequeCertificado.medio_pago == medio_pago_id
+    ).first()
+    if not medio or not cheque:
+        return None
+    return schemas.ChequeCertificadoResponse(
+        identificador=medio.identificador,
+        cliente=medio.cliente,
+        tipo=medio.tipo,
+        estado=medio.estado,
+        moneda=medio.moneda,
+        es_internacional=medio.es_internacional,
+        descripcion=medio.descripcion,
+        banco=cheque.banco,
+        numero_cheque=cheque.numero_cheque,
+        monto=cheque.monto,
+        monto_disponible=cheque.monto_disponible,
+        observaciones=cheque.observaciones
+    )
+
 #------------------ Home y Catalogo ------------------------#
 
 #------------------ Sala de Subastas -----------------------#
