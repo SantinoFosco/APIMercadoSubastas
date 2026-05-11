@@ -22,6 +22,14 @@ def get_db():
 def iniciar_registro(request: schemas.RegistroIniciarRequest, db: Session = Depends(get_db)):
     return crud.iniciar_registro(db=db, request=request)
 
+@app.post("/auth/registro/verificar/{mail}", response_model=schemas.RegistroVerificarResponse)
+def verificar_registro(mail: str, verificador: int, db: Session = Depends(get_db)):
+    return crud.verificar_registro(db=db, mail=mail, verificador=verificador)
+
+
+@app.get("/auth/registro/estado", response_model=schemas.RegistroEstadoResponse)
+def estado_registro(mail: str, db: Session = Depends(get_db)):
+    return crud.estado_registro(db=db, mail=mail)
 #------------------ Medios de pago -------------------------#
 
 #------------------ Home y Catalogo ------------------------#
@@ -41,20 +49,14 @@ def create_pais(pais: schemas.PaisCreate, db: Session = Depends(get_db)):
     return crud.create_pais(db=db, pais=pais)
 
 @app.get("/paises/", response_model=list[schemas.Pais])
-def read_paises(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    paises = crud.get_paises(db, skip=skip, limit=limit)
+def read_paises(db: Session = Depends(get_db)):
+    paises = crud.get_paises(db)
     return paises
 
 @app.get("/paises/{numero}", response_model=schemas.Pais)
 def read_pais(numero: int, db: Session = Depends(get_db)):
-    db_pais = crud.get_pais(db, numero=numero)
-    if db_pais is None:
-        raise HTTPException(status_code=404, detail="País no encontrado")
-    return db_pais
+    return crud.get_pais(db, numero=numero)
 
 @app.delete("/paises/{numero}")
 def delete_pais(numero: int, db: Session = Depends(get_db)):
-    db_pais = crud.delete_pais(db, numero=numero)
-    if db_pais is None:
-        raise HTTPException(status_code=404, detail="País no encontrado")
-    return {"message": f"País {numero} eliminado con éxito"}
+    return crud.delete_pais(db, numero=numero)

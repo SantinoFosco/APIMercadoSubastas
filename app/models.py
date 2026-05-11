@@ -111,7 +111,7 @@ class Subasta(Base):
     fecha = Column(Date, nullable=False)
     hora = Column(Time, nullable=False)
     estado = Column(String, nullable=False, server_default="abierta")
-    subastador = Column(Integer, nullable=False, ForeignKey="subastadores.identificador")
+    subastador = Column(Integer, ForeignKey("subastadores.identificador"), nullable=False)
     ubicacion = Column(String, nullable=True)
     capacidadAsistentes = Column(Integer, nullable=True)
     tieneDeposito = Column(String, nullable=True)
