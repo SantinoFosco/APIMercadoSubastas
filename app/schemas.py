@@ -7,81 +7,82 @@ from decimal import Decimal
 
 class RegistroIniciarResponse(BaseModel):
     mensaje: str
-    usuario_id: int
+    personaId: int
 
 class RegistroIniciarRequest(BaseModel):
     nombre: str
+    apellido: str
     documento: str
     mail: str
     direccion: str
-    id_pais: int
+    pais: int
 
 #------------------ Medios de pago -------------------------#
 
-class MedioPagoResponse(BaseModel):
-    identificador: int
-    cliente: int
+class MedioPagoItem(BaseModel):
+    id: int
     tipo: str
     estado: str
-    moneda: str
-    es_internacional: str
     descripcion: Optional[str] = None
+    moneda: str
+    esInternacional: bool
+    montoCheque: Optional[Decimal] = None
+    montoDisponibleCheque: Optional[Decimal] = None
 
-    class Config:
-        from_attributes = True
+class MedioPagoListResponse(BaseModel):
+    tieneMedioPagoVerificado: bool
+    medios: list[MedioPagoItem]
+
+class DescripcionUpdate(BaseModel):
+    descripcion: str
 
 class CuentaBancariaCreate(BaseModel):
     cliente: int
     moneda: str = "ARS"
-    es_internacional: str = "no"
     descripcion: Optional[str] = None
     titular: str
     banco: str
     cbu: str
     alias: Optional[str] = None
-    pais_banco: int
+    paisBanco: int
 
-class CuentaBancariaResponse(MedioPagoResponse):
+class CuentaBancariaResponse(MedioPagoItem):
     titular: str
     banco: str
     cbu: str
     alias: Optional[str] = None
-    pais_banco: int
+    paisBanco: int
 
 class TarjetaCreate(BaseModel):
     cliente: int
     moneda: str = "ARS"
-    es_internacional: str = "no"
     descripcion: Optional[str] = None
     titular: str
-    ultimos_4_digitos: str
+    ultimos4Digitos: str
     vencimiento: date
     marca: str
-    tipo_tarjeta: str
+    tipoTarjeta: str
+    esInternacional: bool = False
 
-class TarjetaResponse(MedioPagoResponse):
+class TarjetaResponse(MedioPagoItem):
     titular: str
-    ultimos_4_digitos: str
+    ultimos4Digitos: str
     vencimiento: date
     marca: str
-    tipo_tarjeta: str
+    tipoTarjeta: str
 
 class ChequeCertificadoCreate(BaseModel):
     cliente: int
     moneda: str = "ARS"
-    es_internacional: str = "no"
     descripcion: Optional[str] = None
     banco: str
-    numero_cheque: str
+    numeroCheque: str
     monto: Decimal
-    monto_disponible: Decimal
     observaciones: Optional[str] = None
 
-class ChequeCertificadoResponse(MedioPagoResponse):
+class ChequeCertificadoResponse(MedioPagoItem):
     banco: str
-    numero_cheque: str
-    monto: Decimal
-    monto_disponible: Decimal
+    numeroCheque: str
     observaciones: Optional[str] = None
 
 #------------------ Home y Catalogo ------------------------#
@@ -91,6 +92,45 @@ class ChequeCertificadoResponse(MedioPagoResponse):
 #------------------ Compras --------------------------------#
 
 #------------------ Personas -------------------------------#
+
+class SectorCreate(BaseModel):
+    nombreSector: str
+    codigoSector: Optional[str] = None
+
+class SectorResponse(BaseModel):
+    identificador: int
+    nombreSector: str
+    codigoSector: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class EmpleadoCreate(BaseModel):
+    cargo: Optional[str] = None
+    sector: Optional[int] = None
+
+class EmpleadoResponse(BaseModel):
+    identificador: int
+    cargo: Optional[str] = None
+    sector: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+class ClienteCreate(BaseModel):
+    identificador: int
+    numeroPais: Optional[int] = None
+    verificador: int
+
+class ClienteResponse(BaseModel):
+    identificador: int
+    numeroPais: Optional[int] = None
+    admitido: str
+    categoria: str
+    verificador: int
+
+    class Config:
+        from_attributes = True
 
 #------------------ Ventas ---------------------------------#
 

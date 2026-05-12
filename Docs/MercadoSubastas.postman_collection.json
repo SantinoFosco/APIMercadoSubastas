@@ -1,0 +1,268 @@
+{
+  "info": {
+    "name": "MercadoSubastas API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth y Registro",
+      "item": [
+        {
+          "name": "Iniciar Registro",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/registro/iniciar" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez\",\n  \"documento\": \"12345678\",\n  \"mail\": \"juan.perez@mail.com\",\n  \"direccion\": \"Av. Corrientes 1234, CABA\",\n  \"pais\": 1\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Medios de Pago",
+      "item": [
+        {
+          "name": "Listar Medios de Pago por Cliente",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/mediosPago?cliente_id=1" }
+          }
+        },
+        {
+          "name": "Obtener Medio de Pago",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/mediosPago/1" }
+          }
+        },
+        {
+          "name": "Actualizar Descripcion",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/mediosPago/1" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Mi tarjeta Visa principal\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Medio de Pago",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/mediosPago/1" }
+          }
+        },
+        {
+          "name": "Crear Cuenta Bancaria",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/mediosPago/cuenta-bancaria" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente\": 1,\n  \"moneda\": \"ARS\",\n  \"descripcion\": \"Cuenta principal Banco Nación\",\n  \"titular\": \"Juan Pérez\",\n  \"banco\": \"Banco de la Nación Argentina\",\n  \"cbu\": \"0110012345678901234567\",\n  \"alias\": \"juan.perez.bna\",\n  \"paisBanco\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Obtener Cuenta Bancaria",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/mediosPago/cuenta-bancaria/1" }
+          }
+        },
+        {
+          "name": "Crear Tarjeta",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/mediosPago/tarjeta" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente\": 1,\n  \"moneda\": \"USD\",\n  \"descripcion\": \"Visa crédito internacional\",\n  \"titular\": \"JUAN PEREZ\",\n  \"ultimos4Digitos\": \"4242\",\n  \"vencimiento\": \"2027-12-31\",\n  \"marca\": \"VISA\",\n  \"tipoTarjeta\": \"credito\",\n  \"esInternacional\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Obtener Tarjeta",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/mediosPago/tarjeta/2" }
+          }
+        },
+        {
+          "name": "Crear Cheque Certificado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/mediosPago/cheque" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente\": 1,\n  \"moneda\": \"ARS\",\n  \"descripcion\": \"Cheque para subasta de arte\",\n  \"banco\": \"Banco Santander\",\n  \"numeroCheque\": \"00123456\",\n  \"monto\": \"150000.00\",\n  \"observaciones\": \"Cheque a 30 días\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Obtener Cheque Certificado",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/mediosPago/cheque/3" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Personas",
+      "item": [
+        {
+          "name": "Crear Sector",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/sectores/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombreSector\": \"Verificaciones\",\n  \"codigoSector\": \"VER-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Listar Sectores",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/sectores/" }
+          }
+        },
+        {
+          "name": "Obtener Sector",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/sectores/1" }
+          }
+        },
+        {
+          "name": "Eliminar Sector",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/sectores/1" }
+          }
+        },
+        {
+          "name": "Crear Empleado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/empleados/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cargo\": \"Verificador\",\n  \"sector\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Listar Empleados",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/empleados/" }
+          }
+        },
+        {
+          "name": "Obtener Empleado",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/empleados/1" }
+          }
+        },
+        {
+          "name": "Eliminar Empleado",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/empleados/1" }
+          }
+        },
+        {
+          "name": "Crear Cliente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/clientes/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificador\": 1,\n  \"numeroPais\": 1,\n  \"verificador\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Listar Clientes",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/clientes/" }
+          }
+        },
+        {
+          "name": "Obtener Cliente",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/clientes/1" }
+          }
+        },
+        {
+          "name": "Eliminar Cliente",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/clientes/1" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Informacion Necesaria",
+      "item": [
+        {
+          "name": "Crear País",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/paises/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Argentina\",\n  \"nombreCorto\": \"ARG\",\n  \"capital\": \"Buenos Aires\",\n  \"nacionalidad\": \"Argentino/a\",\n  \"idiomas\": \"Español\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Listar Países",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/paises/" }
+          }
+        },
+        {
+          "name": "Obtener País por ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/paises/1" }
+          }
+        },
+        {
+          "name": "Eliminar País",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/paises/1" }
+          }
+        }
+      ]
+    }
+  ]
+}
