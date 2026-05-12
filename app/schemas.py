@@ -17,6 +17,14 @@ class RegistroIniciarRequest(BaseModel):
     direccion: str
     pais: int
 
+class RegistroVerificarResponse(BaseModel):
+    mensaje: str
+
+class RegistroEstadoResponse(BaseModel):
+    verificado: bool
+    categoria: str
+    mensaje: str
+
 #------------------ Medios de pago -------------------------#
 
 class MedioPagoItem(BaseModel):
