@@ -99,8 +99,14 @@ def read_paises(db: Session = Depends(get_db)):
 
 @app.get("/paises/{numero}", response_model=schemas.Pais)
 def read_pais(numero: int, db: Session = Depends(get_db)):
-    return crud.get_pais(db, numero=numero)
+    pais = crud.get_pais(db, numero=numero)
+    if not pais:
+        raise HTTPException(status_code=404, detail="País no encontrado")
+    return pais
 
 @app.delete("/paises/{numero}")
 def delete_pais(numero: int, db: Session = Depends(get_db)):
-    return crud.delete_pais(db, numero=numero)
+    pais = crud.delete_pais(db, numero=numero)
+    if not pais:
+        raise HTTPException(status_code=404, detail="País no encontrado")
+    return pais

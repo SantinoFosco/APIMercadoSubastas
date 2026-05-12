@@ -121,4 +121,4 @@ class Pais(PaisBase):
     numero: int
 
     class Config:
-        from_attributes = True # Permite leer modelos de SQLAlchemy
+        from_attributes = True

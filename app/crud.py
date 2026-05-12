@@ -335,12 +335,7 @@ def get_paises(db: Session):
 
 # Obtener un país por su número (ID)
 def get_pais(db: Session, numero: int):
-    db_pais = db.query(models.Pais).filter(models.Pais.numero == numero).first()
-
-    if not db_pais:
-        raise HTTPException(status_code=404, detail="País no encontrado")
-    
-    return db_pais
+    return db.query(models.Pais).filter(models.Pais.numero == numero).first()
 
 # Crear un nuevo país
 def create_pais(db: Session, pais: schemas.PaisCreate):
@@ -354,9 +349,6 @@ def create_pais(db: Session, pais: schemas.PaisCreate):
 def delete_pais(db: Session, numero: int):
     db_pais = db.query(models.Pais).filter(models.Pais.numero == numero).first()
     
-    if not db_pais:
-        raise HTTPException(status_code=404, detail="País no encontrado")
-
     db.delete(db_pais)
     db.commit()
 
