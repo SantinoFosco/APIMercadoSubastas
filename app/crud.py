@@ -1,4 +1,5 @@
 from http.client import HTTPException
+from random import random
 
 from sqlalchemy.orm import Session
 from . import models, schemas
@@ -44,8 +45,8 @@ def iniciar_registro(db: Session, request: schemas.RegistroIniciarRequest):
         db.rollback()
         raise e
     
-def verificar_registro(db: Session, mail: str):
-    persona = db.query(models.PersonaDetalle).filter(models.PersonaDetalle.mail == mail).first()
+def aprobar_registro(db: Session, request: schemas.RegistroVerificacionRequest):
+    persona = db.query(models.PersonaDetalle).filter(models.PersonaDetalle.mail == request.mail).first()
 
     if not persona:
         return schemas.RegistroVerificarResponse(mensaje="Correo no registrado")
@@ -57,7 +58,26 @@ def verificar_registro(db: Session, mail: str):
         nuevo_cliente = models.Cliente(
             numeroPais=persona.pais,
             admitido="si",
-            categoria=random.choice(categorias)
+            categoria=random.choice(categorias),
+            verificador=request.verificador
+        )
+
+        db.add(nuevo_cliente)
+        db.commit()
+
+        return schemas.RegistroVerificarResponse(mensaje="Registro verificado exitosamente")
+    
+def desaprobar_registro(db: Session, request: schemas.RegistroVerificacionRequest):
+    persona = db.query(models.PersonaDetalle).filter(models.PersonaDetalle.mail == request.mail).first()
+
+    if not persona:
+        return schemas.RegistroVerificarResponse(mensaje="Correo no registrado")
+
+    else:
+        nuevo_cliente = models.Cliente(
+            numeroPais=persona.pais,
+            admitido="no",
+            verificador=request.verificador
         )
 
         db.add(nuevo_cliente)

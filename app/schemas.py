@@ -20,6 +20,10 @@ class RegistroIniciarRequest(BaseModel):
 class RegistroVerificarResponse(BaseModel):
     mensaje: str
 
+class RegistroVerificacionRequest(BaseModel):
+    mail: str
+    verificador: int
+
 class RegistroEstadoResponse(BaseModel):
     verificado: bool
     categoria: str

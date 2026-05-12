@@ -26,14 +26,18 @@ def hello_world():
 def iniciar_registro(request: schemas.RegistroIniciarRequest, db: Session = Depends(get_db)):
     return crud.iniciar_registro(db=db, request=request)
 
-@app.post("/auth/registro/verificar/{mail}", response_model=schemas.RegistroVerificarResponse)
-def verificar_registro(mail: str, verificador: int, db: Session = Depends(get_db)):
-    return crud.verificar_registro(db=db, mail=mail, verificador=verificador)
+@app.post("/auth/registro/aprobar", response_model=schemas.RegistroVerificarResponse)
+def aprobar_registro(request: schemas.RegistroVerificacionRequest, db: Session = Depends(get_db)):
+    return crud.aprobar_registro(db=db, request=request)
 
+@app.post("/auth/registro/desaprobar", response_model=schemas.RegistroVerificarResponse)
+def aprobar_registro(request: schemas.RegistroVerificacionRequest, db: Session = Depends(get_db)):
+    return crud.desaprobar_registro(db=db, request=request)
 
 @app.get("/auth/registro/estado", response_model=schemas.RegistroEstadoResponse)
 def estado_registro(mail: str, db: Session = Depends(get_db)):
     return crud.estado_registro(db=db, mail=mail)
+
 #------------------ Medios de pago -------------------------#
 
 @app.get("/mediosPago", response_model=schemas.MedioPagoListResponse)
