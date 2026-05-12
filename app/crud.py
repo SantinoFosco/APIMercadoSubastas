@@ -10,23 +10,23 @@ def iniciar_registro(db: Session, request: schemas.RegistroIniciarRequest):
     if usuario_existente:
         return schemas.RegistroIniciarResponse(
             mensaje="El documento ya está registrado",
-            usuario_id=usuario_existente.identificador
+            personaId=usuario_existente.identificador
         )
 
     try:
         nueva_persona = models.Persona(
-            nombre=request.nombre,
+            nombre=f"{request.nombre} {request.apellido}",
             documento=request.documento,
             direccion=request.direccion,
             estado="inactivo"
         )
         db.add(nueva_persona)
-        
-        db.flush() 
+
+        db.flush()
 
         nuevo_detalle = models.PersonaDetalle(
             persona=nueva_persona.identificador,
-            pais=request.id_pais,
+            pais=request.pais,
             mail=request.mail,
             contrasenia="PENDIENTE"
         )
@@ -37,7 +37,7 @@ def iniciar_registro(db: Session, request: schemas.RegistroIniciarRequest):
 
         return schemas.RegistroIniciarResponse(
             mensaje="Registro iniciado exitosamente",
-            usuario_id=nueva_persona.identificador
+            personaId=nueva_persona.identificador
         )
 
     except Exception as e:
@@ -97,10 +97,55 @@ def estado_registro(db: Session, mail: str):
 
 #------------------ Medios de pago -------------------------#
 
-def get_medios_pago_cliente(db: Session, cliente_id: int):
-    return db.query(models.MedioPago).filter(
+def _build_medio_pago_item(medio: models.MedioPago, db) -> schemas.MedioPagoItem:
+    monto = None
+    monto_disp = None
+    if medio.tipo == "cheque_certificado":
+        cheque = db.query(models.mpChequeCertificado).filter(
+            models.mpChequeCertificado.medio_pago == medio.identificador
+        ).first()
+        if cheque:
+            monto = cheque.monto
+            monto_disp = cheque.monto_disponible
+    return schemas.MedioPagoItem(
+        id=medio.identificador,
+        tipo=medio.tipo,
+        estado=medio.estado,
+        descripcion=medio.descripcion,
+        moneda=medio.moneda,
+        esInternacional=medio.es_internacional == "si",
+        montoCheque=monto,
+        montoDisponibleCheque=monto_disp
+    )
+
+def get_medios_pago_cliente(db: Session, cliente_id: int) -> schemas.MedioPagoListResponse:
+    medios = db.query(models.MedioPago).filter(
         models.MedioPago.cliente == cliente_id
     ).all()
+    items = [_build_medio_pago_item(m, db) for m in medios]
+    return schemas.MedioPagoListResponse(
+        tieneMedioPagoVerificado=any(i.estado == "verificado" for i in items),
+        medios=items
+    )
+
+def get_medio_pago_detalle(db: Session, medio_pago_id: int):
+    medio = db.query(models.MedioPago).filter(
+        models.MedioPago.identificador == medio_pago_id
+    ).first()
+    if not medio:
+        return None
+    return _build_medio_pago_item(medio, db)
+
+def update_medio_pago_descripcion(db: Session, medio_pago_id: int, descripcion: str):
+    medio = db.query(models.MedioPago).filter(
+        models.MedioPago.identificador == medio_pago_id
+    ).first()
+    if not medio:
+        return None
+    medio.descripcion = descripcion
+    db.commit()
+    db.refresh(medio)
+    return _build_medio_pago_item(medio, db)
 
 def delete_medio_pago(db: Session, medio_pago_id: int):
     db_medio = db.query(models.MedioPago).filter(
@@ -118,7 +163,7 @@ def create_cuenta_bancaria(db: Session, request: schemas.CuentaBancariaCreate):
             tipo="cuenta_bancaria",
             estado="pendiente",
             moneda=request.moneda,
-            es_internacional=request.es_internacional,
+            es_internacional="no",
             descripcion=request.descripcion
         )
         db.add(nuevo_medio)
@@ -130,7 +175,7 @@ def create_cuenta_bancaria(db: Session, request: schemas.CuentaBancariaCreate):
             banco=request.banco,
             cbu=request.cbu,
             alias=request.alias,
-            pais_banco=request.pais_banco
+            pais_banco=request.paisBanco
         )
         db.add(nueva_cuenta)
         db.commit()
@@ -138,18 +183,17 @@ def create_cuenta_bancaria(db: Session, request: schemas.CuentaBancariaCreate):
         db.refresh(nueva_cuenta)
 
         return schemas.CuentaBancariaResponse(
-            identificador=nuevo_medio.identificador,
-            cliente=nuevo_medio.cliente,
+            id=nuevo_medio.identificador,
             tipo=nuevo_medio.tipo,
             estado=nuevo_medio.estado,
-            moneda=nuevo_medio.moneda,
-            es_internacional=nuevo_medio.es_internacional,
             descripcion=nuevo_medio.descripcion,
+            moneda=nuevo_medio.moneda,
+            esInternacional=False,
             titular=nueva_cuenta.titular,
             banco=nueva_cuenta.banco,
             cbu=nueva_cuenta.cbu,
             alias=nueva_cuenta.alias,
-            pais_banco=nueva_cuenta.pais_banco
+            paisBanco=nueva_cuenta.pais_banco
         )
     except Exception as e:
         db.rollback()
@@ -165,18 +209,17 @@ def get_cuenta_bancaria(db: Session, medio_pago_id: int):
     if not medio or not cuenta:
         return None
     return schemas.CuentaBancariaResponse(
-        identificador=medio.identificador,
-        cliente=medio.cliente,
+        id=medio.identificador,
         tipo=medio.tipo,
         estado=medio.estado,
-        moneda=medio.moneda,
-        es_internacional=medio.es_internacional,
         descripcion=medio.descripcion,
+        moneda=medio.moneda,
+        esInternacional=medio.es_internacional == "si",
         titular=cuenta.titular,
         banco=cuenta.banco,
         cbu=cuenta.cbu,
         alias=cuenta.alias,
-        pais_banco=cuenta.pais_banco
+        paisBanco=cuenta.pais_banco
     )
 
 def create_tarjeta(db: Session, request: schemas.TarjetaCreate):
@@ -186,7 +229,7 @@ def create_tarjeta(db: Session, request: schemas.TarjetaCreate):
             tipo="tarjeta",
             estado="pendiente",
             moneda=request.moneda,
-            es_internacional=request.es_internacional,
+            es_internacional="si" if request.esInternacional else "no",
             descripcion=request.descripcion
         )
         db.add(nuevo_medio)
@@ -195,10 +238,10 @@ def create_tarjeta(db: Session, request: schemas.TarjetaCreate):
         nueva_tarjeta = models.mpTarjeta(
             medio_pago=nuevo_medio.identificador,
             titular=request.titular,
-            ultimos_4_digitos=request.ultimos_4_digitos,
+            ultimos_4_digitos=request.ultimos4Digitos,
             vencimiento=request.vencimiento,
             marca=request.marca,
-            tipo_tarjeta=request.tipo_tarjeta
+            tipo_tarjeta=request.tipoTarjeta
         )
         db.add(nueva_tarjeta)
         db.commit()
@@ -206,18 +249,17 @@ def create_tarjeta(db: Session, request: schemas.TarjetaCreate):
         db.refresh(nueva_tarjeta)
 
         return schemas.TarjetaResponse(
-            identificador=nuevo_medio.identificador,
-            cliente=nuevo_medio.cliente,
+            id=nuevo_medio.identificador,
             tipo=nuevo_medio.tipo,
             estado=nuevo_medio.estado,
-            moneda=nuevo_medio.moneda,
-            es_internacional=nuevo_medio.es_internacional,
             descripcion=nuevo_medio.descripcion,
+            moneda=nuevo_medio.moneda,
+            esInternacional=request.esInternacional,
             titular=nueva_tarjeta.titular,
-            ultimos_4_digitos=nueva_tarjeta.ultimos_4_digitos,
+            ultimos4Digitos=nueva_tarjeta.ultimos_4_digitos,
             vencimiento=nueva_tarjeta.vencimiento,
             marca=nueva_tarjeta.marca,
-            tipo_tarjeta=nueva_tarjeta.tipo_tarjeta
+            tipoTarjeta=nueva_tarjeta.tipo_tarjeta
         )
     except Exception as e:
         db.rollback()
@@ -233,18 +275,17 @@ def get_tarjeta(db: Session, medio_pago_id: int):
     if not medio or not tarjeta:
         return None
     return schemas.TarjetaResponse(
-        identificador=medio.identificador,
-        cliente=medio.cliente,
+        id=medio.identificador,
         tipo=medio.tipo,
         estado=medio.estado,
-        moneda=medio.moneda,
-        es_internacional=medio.es_internacional,
         descripcion=medio.descripcion,
+        moneda=medio.moneda,
+        esInternacional=medio.es_internacional == "si",
         titular=tarjeta.titular,
-        ultimos_4_digitos=tarjeta.ultimos_4_digitos,
+        ultimos4Digitos=tarjeta.ultimos_4_digitos,
         vencimiento=tarjeta.vencimiento,
         marca=tarjeta.marca,
-        tipo_tarjeta=tarjeta.tipo_tarjeta
+        tipoTarjeta=tarjeta.tipo_tarjeta
     )
 
 def create_cheque_certificado(db: Session, request: schemas.ChequeCertificadoCreate):
@@ -254,7 +295,7 @@ def create_cheque_certificado(db: Session, request: schemas.ChequeCertificadoCre
             tipo="cheque_certificado",
             estado="pendiente",
             moneda=request.moneda,
-            es_internacional=request.es_internacional,
+            es_internacional="no",
             descripcion=request.descripcion
         )
         db.add(nuevo_medio)
@@ -263,9 +304,9 @@ def create_cheque_certificado(db: Session, request: schemas.ChequeCertificadoCre
         nuevo_cheque = models.mpChequeCertificado(
             medio_pago=nuevo_medio.identificador,
             banco=request.banco,
-            numero_cheque=request.numero_cheque,
+            numero_cheque=request.numeroCheque,
             monto=request.monto,
-            monto_disponible=request.monto_disponible,
+            monto_disponible=request.monto,
             observaciones=request.observaciones
         )
         db.add(nuevo_cheque)
@@ -274,17 +315,16 @@ def create_cheque_certificado(db: Session, request: schemas.ChequeCertificadoCre
         db.refresh(nuevo_cheque)
 
         return schemas.ChequeCertificadoResponse(
-            identificador=nuevo_medio.identificador,
-            cliente=nuevo_medio.cliente,
+            id=nuevo_medio.identificador,
             tipo=nuevo_medio.tipo,
             estado=nuevo_medio.estado,
-            moneda=nuevo_medio.moneda,
-            es_internacional=nuevo_medio.es_internacional,
             descripcion=nuevo_medio.descripcion,
+            moneda=nuevo_medio.moneda,
+            esInternacional=False,
+            montoCheque=nuevo_cheque.monto,
+            montoDisponibleCheque=nuevo_cheque.monto_disponible,
             banco=nuevo_cheque.banco,
-            numero_cheque=nuevo_cheque.numero_cheque,
-            monto=nuevo_cheque.monto,
-            monto_disponible=nuevo_cheque.monto_disponible,
+            numeroCheque=nuevo_cheque.numero_cheque,
             observaciones=nuevo_cheque.observaciones
         )
     except Exception as e:
@@ -301,17 +341,16 @@ def get_cheque_certificado(db: Session, medio_pago_id: int):
     if not medio or not cheque:
         return None
     return schemas.ChequeCertificadoResponse(
-        identificador=medio.identificador,
-        cliente=medio.cliente,
+        id=medio.identificador,
         tipo=medio.tipo,
         estado=medio.estado,
-        moneda=medio.moneda,
-        es_internacional=medio.es_internacional,
         descripcion=medio.descripcion,
+        moneda=medio.moneda,
+        esInternacional=medio.es_internacional == "si",
+        montoCheque=cheque.monto,
+        montoDisponibleCheque=cheque.monto_disponible,
         banco=cheque.banco,
-        numero_cheque=cheque.numero_cheque,
-        monto=cheque.monto,
-        monto_disponible=cheque.monto_disponible,
+        numeroCheque=cheque.numero_cheque,
         observaciones=cheque.observaciones
     )
 
@@ -322,6 +361,91 @@ def get_cheque_certificado(db: Session, medio_pago_id: int):
 #------------------ Compras --------------------------------#
 
 #------------------ Personas -------------------------------#
+
+def create_sector(db: Session, request: schemas.SectorCreate):
+    nuevo = models.Sector(
+        nombreSector=request.nombreSector,
+        codigoSector=request.codigoSector
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return schemas.SectorResponse(
+        identificador=nuevo.indentificador,
+        nombreSector=nuevo.nombreSector,
+        codigoSector=nuevo.codigoSector
+    )
+
+def get_sectores(db: Session):
+    sectores = db.query(models.Sector).all()
+    return [schemas.SectorResponse(
+        identificador=s.indentificador,
+        nombreSector=s.nombreSector,
+        codigoSector=s.codigoSector
+    ) for s in sectores]
+
+def get_sector(db: Session, sector_id: int):
+    s = db.query(models.Sector).filter(models.Sector.indentificador == sector_id).first()
+    if not s:
+        return None
+    return schemas.SectorResponse(
+        identificador=s.indentificador,
+        nombreSector=s.nombreSector,
+        codigoSector=s.codigoSector
+    )
+
+def delete_sector(db: Session, sector_id: int):
+    s = db.query(models.Sector).filter(models.Sector.indentificador == sector_id).first()
+    if s:
+        db.delete(s)
+        db.commit()
+    return s
+
+def create_empleado(db: Session, request: schemas.EmpleadoCreate):
+    nuevo = models.Empleado(cargo=request.cargo, sector=request.sector)
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+def get_empleados(db: Session):
+    return db.query(models.Empleado).all()
+
+def get_empleado(db: Session, empleado_id: int):
+    return db.query(models.Empleado).filter(models.Empleado.identificador == empleado_id).first()
+
+def delete_empleado(db: Session, empleado_id: int):
+    e = db.query(models.Empleado).filter(models.Empleado.identificador == empleado_id).first()
+    if e:
+        db.delete(e)
+        db.commit()
+    return e
+
+def create_cliente(db: Session, request: schemas.ClienteCreate):
+    nuevo = models.Cliente(
+        identificador=request.identificador,
+        numeroPais=request.numeroPais,
+        admitido="no",
+        categoria="comun",
+        verificador=request.verificador
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+def get_clientes(db: Session):
+    return db.query(models.Cliente).all()
+
+def get_cliente(db: Session, cliente_id: int):
+    return db.query(models.Cliente).filter(models.Cliente.identificador == cliente_id).first()
+
+def delete_cliente(db: Session, cliente_id: int):
+    c = db.query(models.Cliente).filter(models.Cliente.identificador == cliente_id).first()
+    if c:
+        db.delete(c)
+        db.commit()
+    return c
 
 
 
