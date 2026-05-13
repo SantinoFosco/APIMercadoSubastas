@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from . import crud, models, schemas
 from .database import SessionLocal, engine
@@ -96,15 +97,209 @@ def delete_medio_pago(medio_pago_id: int, db: Session = Depends(get_db)):
 
 #------------------ Home y Catalogo ------------------------#
 
+@app.post("/productos/", response_model=schemas.ProductoResponse, status_code=201)
+def create_producto(request: schemas.ProductoCreate, db: Session = Depends(get_db)):
+    return crud.create_producto(db=db, request=request)
+
+@app.delete("/productos/{producto_id}")
+def delete_producto(producto_id: int, db: Session = Depends(get_db)):
+    try:
+        result = crud.delete_producto(db=db, producto_id=producto_id)
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="No se puede eliminar: hay fotos, presentaciones o items de catálogo que dependen de este producto")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    return {"message": f"Producto {producto_id} eliminado con éxito"}
+
+@app.post("/fotos/", response_model=schemas.FotoResponse, status_code=201)
+def create_foto(request: schemas.FotoCreate, db: Session = Depends(get_db)):
+    return crud.create_foto(db=db, request=request)
+
+@app.delete("/fotos/{foto_id}")
+def delete_foto(foto_id: int, db: Session = Depends(get_db)):
+    try:
+        result = crud.delete_foto(db=db, foto_id=foto_id)
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="No se puede eliminar: hay presentaciones que dependen de esta foto")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Foto no encontrada")
+    return {"message": f"Foto {foto_id} eliminada con éxito"}
+
+@app.post("/productos-presentacion/", response_model=schemas.ProductoPresentacionResponse, status_code=201)
+def create_producto_presentacion(request: schemas.ProductoPresentacionCreate, db: Session = Depends(get_db)):
+    return crud.create_producto_presentacion(db=db, request=request)
+
+@app.delete("/productos-presentacion/{pp_id}")
+def delete_producto_presentacion(pp_id: int, db: Session = Depends(get_db)):
+    try:
+        result = crud.delete_producto_presentacion(db=db, pp_id=pp_id)
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="No se puede eliminar: hay registros que dependen de esta presentación")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Presentación no encontrada")
+    return {"message": f"Presentación {pp_id} eliminada con éxito"}
+
+@app.post("/catalogos/", response_model=schemas.CatalogoResponse, status_code=201)
+def create_catalogo(request: schemas.CatalogoCreate, db: Session = Depends(get_db)):
+    return crud.create_catalogo(db=db, request=request)
+
+@app.delete("/catalogos/{catalogo_id}")
+def delete_catalogo(catalogo_id: int, db: Session = Depends(get_db)):
+    try:
+        result = crud.delete_catalogo(db=db, catalogo_id=catalogo_id)
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="No se puede eliminar: hay items de catálogo que dependen de este catálogo")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Catálogo no encontrado")
+    return {"message": f"Catálogo {catalogo_id} eliminado con éxito"}
+
+@app.post("/items-catalogo/", response_model=schemas.ItemCatalogoResponse, status_code=201)
+def create_item_catalogo(request: schemas.ItemCatalogoCreate, db: Session = Depends(get_db)):
+    return crud.create_item_catalogo(db=db, request=request)
+
+@app.delete("/items-catalogo/{item_id}")
+def delete_item_catalogo(item_id: int, db: Session = Depends(get_db)):
+    try:
+        result = crud.delete_item_catalogo(db=db, item_id=item_id)
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="No se puede eliminar: hay pujos que dependen de este item")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Item no encontrado")
+    return {"message": f"Item {item_id} eliminado con éxito"}
+
+@app.get("/home", response_model=schemas.HomeResponse)
+def get_home(categoria: str = Query(...), db: Session = Depends(get_db)):
+    return crud.get_home(db=db, categoria=categoria)
+
+@app.get("/subastas/{subasta_id}/catalogo", response_model=list[schemas.ProductoCatalogo])
+def get_catalogo_subasta(subasta_id: int, db: Session = Depends(get_db)):
+    result = crud.get_catalogo_subasta(db=db, subasta_id=subasta_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Subasta no encontrada")
+    return result
+
+@app.get("/subastas/{subasta_id}/catalogo/{producto_id}", response_model=schemas.DetalleProducto)
+def get_detalle_producto_catalogo(subasta_id: int, producto_id: int, db: Session = Depends(get_db)):
+    result = crud.get_detalle_producto_catalogo(db=db, subasta_id=subasta_id, producto_id=producto_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Producto no encontrado en el catálogo")
+    return result
+
 #------------------ Sala de Subastas -----------------------#
 
+@app.get("/subastas/", response_model=list[schemas.SubastaResponse])
+def get_subastas(db: Session = Depends(get_db)):
+    return crud.get_subastas(db=db)
+
+@app.post("/subastas/", response_model=schemas.SubastaResponse, status_code=201)
+def create_subasta(request: schemas.SubastaCreate, db: Session = Depends(get_db)):
+    return crud.create_subasta(db=db, request=request)
+
+@app.delete("/subastas/{subasta_id}")
+def delete_subasta(subasta_id: int, db: Session = Depends(get_db)):
+    try:
+        result = crud.delete_subasta(db=db, subasta_id=subasta_id)
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="No se puede eliminar: hay asistentes, catálogos u otros registros que dependen de esta subasta")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Subasta no encontrada")
+    return {"message": f"Subasta {subasta_id} eliminada con éxito"}
+
+@app.post("/asistentes/", response_model=schemas.AsistenteResponse, status_code=201)
+def create_asistente(request: schemas.AsistenteCreate, db: Session = Depends(get_db)):
+    return crud.create_asistente(db=db, request=request)
+
+@app.delete("/asistentes/{asistente_id}")
+def delete_asistente(asistente_id: int, db: Session = Depends(get_db)):
+    try:
+        result = crud.delete_asistente(db=db, asistente_id=asistente_id)
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="No se puede eliminar: hay registros que dependen de este asistente")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Asistente no encontrado")
+    return {"message": f"Asistente {asistente_id} eliminado con éxito"}
+
+@app.get("/subasta/{subasta_id}/vivo", response_model=schemas.VivoSubasta)
+def get_subasta_en_vivo(subasta_id: int, db: Session = Depends(get_db)):
+    result = crud.get_subasta_en_vivo(db=db, subasta_id=subasta_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Subasta no encontrada o sin items activos")
+    return result
+
+@app.post("/pujar", response_model=schemas.PujoResponse, status_code=201)
+def pujar(request: schemas.PujoRequest, db: Session = Depends(get_db)):
+    result, error = crud.create_pujo(db=db, request=request)
+    if error == "asistente":
+        raise HTTPException(status_code=404, detail="Asistente no encontrado")
+    if error == "item":
+        raise HTTPException(status_code=404, detail="Item de catálogo no encontrado")
+    return result
+
 #------------------ Compras --------------------------------#
+
+@app.get("/subasta/{subasta_id}/{usuario_id}/compras", response_model=list[schemas.ProductoComprado])
+def get_compras(subasta_id: int, usuario_id: int, db: Session = Depends(get_db)):
+    result = crud.get_compras(db=db, subasta_id=subasta_id, usuario_id=usuario_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Asistente no encontrado en esta subasta")
+    return result
+
+@app.get("/subasta/{subasta_id}/{usuario_id}/compras/precio", response_model=schemas.PrecioFinal)
+def get_precio_total(subasta_id: int, usuario_id: int, db: Session = Depends(get_db)):
+    result = crud.get_precio_total(db=db, subasta_id=subasta_id, usuario_id=usuario_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Asistente no encontrado en esta subasta")
+    return result
+
+@app.post("/subasta/{subasta_id}/{usuario_id}/compras/envio")
+def confirmar_envio(subasta_id: int, usuario_id: int, metodoEnvio: str = Query(...), db: Session = Depends(get_db)):
+    result = crud.confirmar_envio(db=db, subasta_id=subasta_id, usuario_id=usuario_id, metodo_envio=metodoEnvio)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Asistente no encontrado en esta subasta")
+    return {"mensaje": result}
+
+@app.post("/subasta/{subasta_id}/{usuario_id}/compras/pagar")
+def confirmar_pago(subasta_id: int, usuario_id: int, metodoPagoId: int = Query(...), db: Session = Depends(get_db)):
+    result, error = crud.confirmar_pago(db=db, subasta_id=subasta_id, usuario_id=usuario_id, metodo_pago_id=metodoPagoId)
+    if error == "asistente":
+        raise HTTPException(status_code=404, detail="Asistente no encontrado en esta subasta")
+    if error == "medio_pago":
+        raise HTTPException(status_code=404, detail="Medio de pago no encontrado o no pertenece al usuario")
+    return {"mensaje": result}
 
 #------------------ Personas -------------------------------#
 
 @app.get("/sectores/", response_model=list[schemas.SectorResponse])
 def get_sectores(db: Session = Depends(get_db)):
     return crud.get_sectores(db=db)
+
+@app.post("/duenios/", response_model=schemas.DuenioResponse, status_code=201)
+def create_duenio(request: schemas.DuenioCreate, db: Session = Depends(get_db)):
+    return crud.create_duenio(db=db, request=request)
+
+@app.delete("/duenios/{duenio_id}")
+def delete_duenio(duenio_id: int, db: Session = Depends(get_db)):
+    try:
+        result = crud.delete_duenio(db=db, duenio_id=duenio_id)
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="No se puede eliminar: hay productos que dependen de este dueño")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Dueño no encontrado")
+    return {"message": f"Dueño {duenio_id} eliminado con éxito"}
+
+@app.post("/subastadores/", response_model=schemas.SubastadorResponse, status_code=201)
+def create_subastador(request: schemas.SubastadorCreate, db: Session = Depends(get_db)):
+    return crud.create_subastador(db=db, request=request)
+
+@app.delete("/subastadores/{subastador_id}")
+def delete_subastador(subastador_id: int, db: Session = Depends(get_db)):
+    try:
+        result = crud.delete_subastador(db=db, subastador_id=subastador_id)
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="No se puede eliminar: hay subastas que dependen de este subastador")
+    if result is None:
+        raise HTTPException(status_code=404, detail="Subastador no encontrado")
+    return {"message": f"Subastador {subastador_id} eliminado con éxito"}
 
 @app.post("/sectores/", response_model=schemas.SectorResponse)
 def create_sector(request: schemas.SectorCreate, db: Session = Depends(get_db)):

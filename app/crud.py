@@ -1,5 +1,8 @@
 from http.client import HTTPException
 
+import base64
+from datetime import datetime
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from . import models, schemas
 
@@ -57,7 +60,7 @@ def verificar_registro(db: Session, mail: str):
         nuevo_cliente = models.Cliente(
             numeroPais=persona.pais,
             admitido="si",
-            categoria=random.choice(categorias)
+            categoria=categorias[0]
         )
 
         db.add(nuevo_cliente)
@@ -356,9 +359,515 @@ def get_cheque_certificado(db: Session, medio_pago_id: int):
 
 #------------------ Home y Catalogo ------------------------#
 
+def delete_asistente(db: Session, asistente_id: int):
+    obj = db.query(models.Asistente).filter(models.Asistente.identificador == asistente_id).first()
+    if obj:
+        db.delete(obj)
+        db.commit()
+    return obj
+
+def delete_item_catalogo(db: Session, item_id: int):
+    obj = db.query(models.ItemCatalogo).filter(models.ItemCatalogo.identificador == item_id).first()
+    if obj:
+        db.delete(obj)
+        db.commit()
+    return obj
+
+def delete_catalogo(db: Session, catalogo_id: int):
+    obj = db.query(models.Catalogo).filter(models.Catalogo.identificador == catalogo_id).first()
+    if obj:
+        db.delete(obj)
+        db.commit()
+    return obj
+
+def delete_subasta(db: Session, subasta_id: int):
+    obj = db.query(models.Subasta).filter(models.Subasta.identificador == subasta_id).first()
+    if obj:
+        db.delete(obj)
+        db.commit()
+    return obj
+
+def create_producto(db: Session, request: schemas.ProductoCreate):
+    nuevo = models.Producto(
+        descripcionCatalogo=request.descripcionCatalogo,
+        descripcionCompleta=request.descripcionCompleta,
+        revisor=request.revisor,
+        duenio=request.duenio,
+        fecha=request.fecha,
+        disponible="si",
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+def create_foto(db: Session, request: schemas.FotoCreate):
+    nueva = models.Foto(producto=request.producto, foto=None)
+    db.add(nueva)
+    db.commit()
+    db.refresh(nueva)
+    return nueva
+
+def delete_producto_presentacion(db: Session, pp_id: int):
+    obj = db.query(models.ProductoPresentacion).filter(models.ProductoPresentacion.identificador == pp_id).first()
+    if obj:
+        db.delete(obj)
+        db.commit()
+    return obj
+
+def delete_foto(db: Session, foto_id: int):
+    obj = db.query(models.Foto).filter(models.Foto.identificador == foto_id).first()
+    if obj:
+        db.delete(obj)
+        db.commit()
+    return obj
+
+def delete_producto(db: Session, producto_id: int):
+    obj = db.query(models.Producto).filter(models.Producto.identificador == producto_id).first()
+    if obj:
+        db.delete(obj)
+        db.commit()
+    return obj
+
+def create_producto_presentacion(db: Session, request: schemas.ProductoPresentacionCreate):
+    nuevo = models.ProductoPresentacion(
+        producto=request.producto,
+        titulo=request.titulo,
+        categoria=request.categoria,
+        procedencia=request.procedencia,
+        declaracionLegal=request.declaracionLegal,
+        estado=request.estado,
+        imagenPrincipal=request.imagenPrincipal,
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+def create_catalogo(db: Session, request: schemas.CatalogoCreate):
+    nuevo = models.Catalogo(
+        descripcion=request.descripcion,
+        subasta=request.subasta,
+        responsable=request.responsable,
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+def create_item_catalogo(db: Session, request: schemas.ItemCatalogoCreate):
+    nuevo = models.ItemCatalogo(
+        catalogo=request.catalogo,
+        producto=request.producto,
+        precioBase=request.precioBase,
+        comision=request.comision,
+        subastado="no",
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+def _get_foto_b64(db: Session, producto_id: int) -> str | None:
+    foto = db.query(models.Foto).filter(models.Foto.producto == producto_id).first()
+    if foto and foto.foto:
+        return base64.b64encode(foto.foto).decode("utf-8")
+    return None
+
+def get_home(db: Session, categoria: str) -> schemas.HomeResponse:
+    subastas = db.query(models.Subasta).filter(
+        models.Subasta.estado == "abierta",
+        models.Subasta.categoria == categoria.lower()
+    ).order_by(models.Subasta.fecha).all()
+
+    if not subastas:
+        return schemas.HomeResponse(subastaDestacada=None, subastasGenerales=[])
+
+    def _titulo_subasta(subasta_id: int) -> str:
+        cat = db.query(models.Catalogo).filter(models.Catalogo.subasta == subasta_id).first()
+        return cat.descripcion if cat else f"Subasta #{subasta_id}"
+
+    def _primer_producto_id(subasta_id: int) -> int | None:
+        cat = db.query(models.Catalogo).filter(models.Catalogo.subasta == subasta_id).first()
+        if not cat:
+            return None
+        item = db.query(models.ItemCatalogo).filter(models.ItemCatalogo.catalogo == cat.identificador).first()
+        return item.producto if item else None
+
+    # Subasta destacada: la primera de la lista
+    dest = subastas[0]
+    postores = db.query(models.Asistente).filter(models.Asistente.subasta == dest.identificador).count()
+
+    historial = (
+        db.query(models.HistorialPujos)
+        .filter(models.HistorialPujos.subasta == dest.identificador)
+        .order_by(models.HistorialPujos.fechaHora.desc())
+        .limit(5)
+        .all()
+    )
+    actividad = []
+    for h in historial:
+        persona = db.query(models.Persona).filter(models.Persona.identificador == h.cliente).first()
+        item = db.query(models.ItemCatalogo).filter(models.ItemCatalogo.identificador == h.itemCatalogo).first()
+        pp = db.query(models.ProductoPresentacion).filter(
+            models.ProductoPresentacion.producto == item.producto
+        ).first() if item else None
+        actividad.append(schemas.ActividadReciente(
+            pujaId=h.identificador,
+            nombreComprador=persona.nombre if persona else "Desconocido",
+            nombreProducto=pp.titulo if pp else "Desconocido",
+            fecha=h.fechaHora,
+            valor=f"${h.importe:,.2f}"
+        ))
+
+    primer_prod = _primer_producto_id(dest.identificador)
+    imagen_url = f"/productos/{primer_prod}/imagen-principal" if primer_prod else f"/subastas/{dest.identificador}/imagen-principal"
+
+    destacada = schemas.SubastaDestacada(
+        subastaId=dest.identificador,
+        titulo=_titulo_subasta(dest.identificador),
+        fecha=datetime.combine(dest.fecha, dest.hora),
+        imagenUrl=imagen_url,
+        postoresRegistrados=postores,
+        actividadReciente=actividad
+    )
+
+    generales = []
+    for s in subastas[1:]:
+        prod_id = _primer_producto_id(s.identificador)
+        generales.append(schemas.SubastaGeneral(
+            subastaId=s.identificador,
+            titulo=_titulo_subasta(s.identificador),
+            fecha=datetime.combine(s.fecha, s.hora),
+            imagen=_get_foto_b64(db, prod_id) if prod_id else None
+        ))
+
+    return schemas.HomeResponse(subastaDestacada=destacada, subastasGenerales=generales)
+
+def get_catalogo_subasta(db: Session, subasta_id: int):
+    subasta = db.query(models.Subasta).filter(models.Subasta.identificador == subasta_id).first()
+    if not subasta:
+        return None
+
+    catalogo = db.query(models.Catalogo).filter(models.Catalogo.subasta == subasta_id).first()
+    if not catalogo:
+        return []
+
+    items = db.query(models.ItemCatalogo).filter(models.ItemCatalogo.catalogo == catalogo.identificador).all()
+
+    result = []
+    for item in items:
+        pp = db.query(models.ProductoPresentacion).filter(
+            models.ProductoPresentacion.producto == item.producto
+        ).first()
+        producto = db.query(models.Producto).filter(models.Producto.identificador == item.producto).first()
+        result.append(schemas.ProductoCatalogo(
+            productoId=item.producto,
+            titulo=pp.titulo if pp else "Sin título",
+            descripcionCorta=producto.descripcionCatalogo if producto else "",
+            precioBase=item.precioBase,
+            subastado=item.subastado,
+            imagen=_get_foto_b64(db, item.producto)
+        ))
+    return result
+
+def get_detalle_producto_catalogo(db: Session, subasta_id: int, producto_id: int):
+    subasta = db.query(models.Subasta).filter(models.Subasta.identificador == subasta_id).first()
+    if not subasta:
+        return None
+
+    catalogo = db.query(models.Catalogo).filter(models.Catalogo.subasta == subasta_id).first()
+    if not catalogo:
+        return None
+
+    item = db.query(models.ItemCatalogo).filter(
+        models.ItemCatalogo.catalogo == catalogo.identificador,
+        models.ItemCatalogo.producto == producto_id
+    ).first()
+    if not item:
+        return None
+
+    producto = db.query(models.Producto).filter(models.Producto.identificador == producto_id).first()
+    pp = db.query(models.ProductoPresentacion).filter(
+        models.ProductoPresentacion.producto == producto_id
+    ).first()
+
+    return schemas.DetalleProducto(
+        productoId=producto_id,
+        titulo=pp.titulo if pp else "Sin título",
+        descripcion=producto.descripcionCompleta if producto else "",
+        precioBase=item.precioBase,
+        subastado=item.subastado,
+        imagen=_get_foto_b64(db, producto_id)
+    )
+
 #------------------ Sala de Subastas -----------------------#
 
+def get_subastas(db: Session):
+    return db.query(models.Subasta).all()
+
+def create_subasta(db: Session, request: schemas.SubastaCreate):
+    nuevo = models.Subasta(
+        fecha=request.fecha,
+        hora=request.hora,
+        estado="abierta",
+        subastador=request.subastador,
+        ubicacion=request.ubicacion,
+        capacidadAsistentes=request.capacidadAsistentes,
+        tieneDeposito=request.tieneDeposito,
+        seguridadPropia=request.seguridadPropia,
+        categoria=request.categoria,
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+def create_asistente(db: Session, request: schemas.AsistenteCreate):
+    nuevo = models.Asistente(
+        numeroPostor=request.numeroPostor,
+        cliente=request.cliente,
+        subasta=request.subasta,
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+def get_subasta_en_vivo(db: Session, subasta_id: int):
+    subasta = db.query(models.Subasta).filter(models.Subasta.identificador == subasta_id).first()
+    if not subasta:
+        return None
+
+    catalogo = db.query(models.Catalogo).filter(models.Catalogo.subasta == subasta_id).first()
+    if not catalogo:
+        return None
+
+    # Primer item aún no subastado = el que se está subastando ahora
+    item_actual = db.query(models.ItemCatalogo).filter(
+        models.ItemCatalogo.catalogo == catalogo.identificador,
+        models.ItemCatalogo.subastado == "no"
+    ).order_by(models.ItemCatalogo.identificador).first()
+    if not item_actual:
+        return None
+
+    pp = db.query(models.ProductoPresentacion).filter(
+        models.ProductoPresentacion.producto == item_actual.producto
+    ).first()
+
+    # Precio actual = máxima puja registrada, o precio base si no hay pujas
+    max_puja = db.query(func.max(models.Pujo.importe)).filter(
+        models.Pujo.item == item_actual.identificador
+    ).scalar()
+    precio_actual = float(max_puja) if max_puja else float(item_actual.precioBase)
+
+    pujas_totales = db.query(models.Pujo).filter(
+        models.Pujo.item == item_actual.identificador
+    ).count()
+
+    # Tiempo restante hasta la fecha/hora de la subasta
+    subasta_dt = datetime.combine(subasta.fecha, subasta.hora)
+    delta = subasta_dt - datetime.now()
+    if delta.total_seconds() > 0:
+        h, rem = divmod(int(delta.total_seconds()), 3600)
+        m, s = divmod(rem, 60)
+        tiempo_restante = f"{h:02d}:{m:02d}:{s:02d}"
+    else:
+        tiempo_restante = "00:00:00"
+
+    incrementos = [
+        round(precio_actual * 0.01, 2),
+        round(precio_actual * 0.05, 2),
+        round(precio_actual * 0.10, 2),
+    ]
+
+    historial = (
+        db.query(models.HistorialPujos)
+        .filter(
+            models.HistorialPujos.subasta == subasta_id,
+            models.HistorialPujos.itemCatalogo == item_actual.identificador,
+        )
+        .order_by(models.HistorialPujos.fechaHora.desc())
+        .limit(5)
+        .all()
+    )
+    actividad = []
+    for h in historial:
+        persona = db.query(models.Persona).filter(models.Persona.identificador == h.cliente).first()
+        actividad.append(schemas.ActividadReciente(
+            pujaId=h.identificador,
+            nombreComprador=persona.nombre if persona else "Desconocido",
+            nombreProducto=pp.titulo if pp else "Desconocido",
+            fecha=h.fechaHora,
+            valor=f"${h.importe:,.2f}",
+        ))
+
+    return schemas.VivoSubasta(
+        subastaId=subasta_id,
+        productoId=item_actual.producto,
+        titulo=pp.titulo if pp else "Sin título",
+        precioActual=precio_actual,
+        proximaPuja=round(precio_actual + incrementos[0], 2),
+        tiempoRestante=tiempo_restante,
+        imagen=_get_foto_b64(db, item_actual.producto),
+        pujasTotales=pujas_totales,
+        incrementosSugeridos=incrementos,
+        actividadReciente=actividad,
+    )
+
+def create_pujo(db: Session, request: schemas.PujoRequest):
+    asistente = db.query(models.Asistente).filter(
+        models.Asistente.identificador == request.asistenteId
+    ).first()
+    if not asistente:
+        return None, "asistente"
+
+    item = db.query(models.ItemCatalogo).filter(
+        models.ItemCatalogo.identificador == request.itemId
+    ).first()
+    if not item:
+        return None, "item"
+
+    try:
+        # La puja anterior deja de ser ganadora
+        db.query(models.Pujo).filter(
+            models.Pujo.item == request.itemId,
+            models.Pujo.ganador == "si"
+        ).update({"ganador": "no"})
+
+        nuevo_pujo = models.Pujo(
+            assitente=request.asistenteId,
+            item=request.itemId,
+            importe=request.importe,
+            ganador="si",
+        )
+        db.add(nuevo_pujo)
+        db.flush()
+
+        nuevo_historial = models.HistorialPujos(
+            pujo=nuevo_pujo.identificador,
+            asistente=request.asistenteId,
+            itemCatalogo=request.itemId,
+            cliente=asistente.cliente,
+            subasta=asistente.subasta,
+            importe=request.importe,
+            fechaHora=datetime.now(),
+        )
+        db.add(nuevo_historial)
+        db.commit()
+        db.refresh(nuevo_pujo)
+        db.refresh(nuevo_historial)
+
+        return schemas.PujoResponse(
+            pujoId=nuevo_pujo.identificador,
+            asistenteId=nuevo_pujo.assitente,
+            itemId=nuevo_pujo.item,
+            importe=float(nuevo_pujo.importe),
+            ganador=nuevo_pujo.ganador,
+            historialId=nuevo_historial.identificador,
+            fechaHora=nuevo_historial.fechaHora,
+        ), None
+
+    except Exception as e:
+        db.rollback()
+        raise e
+
 #------------------ Compras --------------------------------#
+
+def _get_asistente(db: Session, subasta_id: int, usuario_id: int):
+    return db.query(models.Asistente).filter(
+        models.Asistente.subasta == subasta_id,
+        models.Asistente.cliente == usuario_id
+    ).first()
+
+def get_compras(db: Session, subasta_id: int, usuario_id: int):
+    asistente = _get_asistente(db, subasta_id, usuario_id)
+    if not asistente:
+        return None
+
+    pujos = db.query(models.Pujo).filter(
+        models.Pujo.assitente == asistente.identificador,
+        models.Pujo.ganador == "si"
+    ).all()
+
+    result = []
+    for pujo in pujos:
+        item = db.query(models.ItemCatalogo).filter(
+            models.ItemCatalogo.identificador == pujo.item
+        ).first()
+        if not item:
+            continue
+        pp = db.query(models.ProductoPresentacion).filter(
+            models.ProductoPresentacion.producto == item.producto
+        ).first()
+        result.append(schemas.ProductoComprado(
+            productoId=item.producto,
+            titulo=pp.titulo if pp else "Sin título",
+            precioFinal=float(pujo.importe),
+            subastado=item.subastado,
+            imagen=_get_foto_b64(db, item.producto)
+        ))
+    return result
+
+def get_precio_total(db: Session, subasta_id: int, usuario_id: int):
+    asistente = _get_asistente(db, subasta_id, usuario_id)
+    if not asistente:
+        return None
+
+    pujos = db.query(models.Pujo).filter(
+        models.Pujo.assitente == asistente.identificador,
+        models.Pujo.ganador == "si"
+    ).all()
+
+    total_precio = 0.0
+    total_comision = 0.0
+    total_seguro = 0.0
+
+    for pujo in pujos:
+        item = db.query(models.ItemCatalogo).filter(
+            models.ItemCatalogo.identificador == pujo.item
+        ).first()
+        if not item:
+            continue
+        total_precio += float(pujo.importe)
+        total_comision += float(item.comision)
+
+        producto = db.query(models.Producto).filter(
+            models.Producto.identificador == item.producto
+        ).first()
+        if producto and producto.seguro:
+            seguro = db.query(models.Seguro).filter(
+                models.Seguro.nroPoliza == producto.seguro
+            ).first()
+            if seguro:
+                total_seguro += float(seguro.importe)
+
+    return schemas.PrecioFinal(
+        precioFinal=total_precio,
+        comision=total_comision,
+        seguro=total_seguro,
+        total=round(total_precio + total_comision + total_seguro, 2)
+    )
+
+def confirmar_envio(db: Session, subasta_id: int, usuario_id: int, metodo_envio: str):
+    asistente = _get_asistente(db, subasta_id, usuario_id)
+    if not asistente:
+        return None
+    return f"Envío confirmado: {metodo_envio}"
+
+def confirmar_pago(db: Session, subasta_id: int, usuario_id: int, metodo_pago_id: int):
+    asistente = _get_asistente(db, subasta_id, usuario_id)
+    if not asistente:
+        return None, "asistente"
+
+    medio = db.query(models.MedioPago).filter(
+        models.MedioPago.identificador == metodo_pago_id,
+        models.MedioPago.cliente == usuario_id
+    ).first()
+    if not medio:
+        return None, "medio_pago"
+
+    return "Pago confirmado correctamente", None
 
 #------------------ Personas -------------------------------#
 
@@ -400,6 +909,42 @@ def delete_sector(db: Session, sector_id: int):
         db.delete(s)
         db.commit()
     return s
+
+def delete_duenio(db: Session, duenio_id: int):
+    obj = db.query(models.Duenio).filter(models.Duenio.identificador == duenio_id).first()
+    if obj:
+        db.delete(obj)
+        db.commit()
+    return obj
+
+def delete_subastador(db: Session, subastador_id: int):
+    obj = db.query(models.Subastador).filter(models.Subastador.identificador == subastador_id).first()
+    if obj:
+        db.delete(obj)
+        db.commit()
+    return obj
+
+def create_duenio(db: Session, request: schemas.DuenioCreate):
+    nuevo = models.Duenio(
+        identificador=request.identificador,
+        numeroPais=request.numeroPais,
+        verificador=request.verificador,
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+def create_subastador(db: Session, request: schemas.SubastadorCreate):
+    nuevo = models.Subastador(
+        identificador=request.identificador,
+        matricula=request.matricula,
+        region=request.region,
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
 
 def create_empleado(db: Session, request: schemas.EmpleadoCreate):
     nuevo = models.Empleado(cargo=request.cargo, sector=request.sector)

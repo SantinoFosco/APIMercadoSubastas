@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import date
+from datetime import date, datetime, time
 from decimal import Decimal
 
 #------------------ Auth y Registro ------------------------#
@@ -95,9 +95,89 @@ class ChequeCertificadoResponse(MedioPagoItem):
 
 #------------------ Home y Catalogo ------------------------#
 
+class ActividadReciente(BaseModel):
+    pujaId: int
+    nombreComprador: str
+    nombreProducto: str
+    fecha: datetime
+    valor: str
+
+class SubastaDestacada(BaseModel):
+    subastaId: int
+    titulo: str
+    fecha: datetime
+    imagenUrl: str
+    postoresRegistrados: int
+    actividadReciente: list[ActividadReciente]
+
+class SubastaGeneral(BaseModel):
+    subastaId: int
+    titulo: str
+    fecha: datetime
+    imagen: Optional[str] = None
+
+class HomeResponse(BaseModel):
+    subastaDestacada: Optional[SubastaDestacada] = None
+    subastasGenerales: list[SubastaGeneral]
+
+class ProductoCatalogo(BaseModel):
+    productoId: int
+    titulo: str
+    descripcionCorta: str
+    precioBase: Decimal
+    subastado: str
+    imagen: Optional[str] = None
+
+class DetalleProducto(BaseModel):
+    productoId: int
+    titulo: str
+    descripcion: str
+    precioBase: Decimal
+    subastado: str
+    imagen: Optional[str] = None
+
 #------------------ Sala de Subastas -----------------------#
 
+class VivoSubasta(BaseModel):
+    subastaId: int
+    productoId: int
+    titulo: str
+    precioActual: float
+    proximaPuja: float
+    tiempoRestante: str
+    imagen: Optional[str] = None
+    pujasTotales: int
+    incrementosSugeridos: list[float]
+    actividadReciente: list[ActividadReciente]
+
+class PujoRequest(BaseModel):
+    asistenteId: int
+    itemId: int
+    importe: float
+
+class PujoResponse(BaseModel):
+    pujoId: int
+    asistenteId: int
+    itemId: int
+    importe: float
+    ganador: str
+    historialId: int
+    fechaHora: datetime
+
 #------------------ Compras --------------------------------#
+
+class ProductoComprado(BaseModel):
+    productoId: int
+    titulo: str
+    precioFinal: float
+    subastado: str
+    imagen: Optional[str] = None
+
+class PrecioFinal(BaseModel):
+    precioFinal: float
+    comision: float
+    seguro: float
+    total: float
 
 #------------------ Personas -------------------------------#
 
@@ -137,6 +217,153 @@ class ClienteResponse(BaseModel):
     categoria: str
     verificador: int
 
+    class Config:
+        from_attributes = True
+
+#------------------ Personas (extra) -----------------------#
+
+class DuenioCreate(BaseModel):
+    identificador: int
+    numeroPais: Optional[int] = None
+    verificador: int
+
+class DuenioResponse(BaseModel):
+    identificador: int
+    numeroPais: Optional[int] = None
+    verificacionFinanciera: str
+    verificacionJudicial: str
+    calificacionRiesgo: int
+    verificador: int
+    class Config:
+        from_attributes = True
+
+class SubastadorCreate(BaseModel):
+    identificador: int
+    matricula: Optional[str] = None
+    region: Optional[str] = None
+
+class SubastadorResponse(BaseModel):
+    identificador: int
+    matricula: Optional[str] = None
+    region: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+#------------------ Productos ------------------------------#
+
+class ProductoCreate(BaseModel):
+    descripcionCatalogo: str = "No posee"
+    descripcionCompleta: str
+    revisor: int
+    duenio: int
+    fecha: Optional[date] = None
+
+class ProductoResponse(BaseModel):
+    identificador: int
+    descripcionCatalogo: str
+    descripcionCompleta: str
+    revisor: int
+    duenio: int
+    disponible: str
+    fecha: Optional[date] = None
+    class Config:
+        from_attributes = True
+
+class FotoCreate(BaseModel):
+    producto: int
+
+class FotoResponse(BaseModel):
+    identificador: int
+    producto: int
+    class Config:
+        from_attributes = True
+
+class ProductoPresentacionCreate(BaseModel):
+    producto: int
+    titulo: str
+    categoria: str
+    procedencia: Optional[str] = None
+    declaracionLegal: str = "no"
+    estado: str = "borrador"
+    imagenPrincipal: Optional[int] = None
+
+class ProductoPresentacionResponse(BaseModel):
+    identificador: int
+    producto: int
+    titulo: str
+    categoria: str
+    procedencia: Optional[str] = None
+    declaracionLegal: str
+    estado: str
+    imagenPrincipal: Optional[int] = None
+    class Config:
+        from_attributes = True
+
+#------------------ Subastas -------------------------------#
+
+class SubastaCreate(BaseModel):
+    fecha: date
+    hora: time
+    subastador: int
+    ubicacion: Optional[str] = None
+    capacidadAsistentes: Optional[int] = None
+    tieneDeposito: Optional[str] = None
+    seguridadPropia: Optional[str] = None
+    categoria: str = "comun"
+
+class SubastaResponse(BaseModel):
+    identificador: int
+    fecha: date
+    hora: time
+    estado: str
+    subastador: int
+    ubicacion: Optional[str] = None
+    capacidadAsistentes: Optional[int] = None
+    tieneDeposito: Optional[str] = None
+    seguridadPropia: Optional[str] = None
+    categoria: str
+    class Config:
+        from_attributes = True
+
+class CatalogoCreate(BaseModel):
+    descripcion: str
+    subasta: Optional[int] = None
+    responsable: int
+
+class CatalogoResponse(BaseModel):
+    identificador: int
+    descripcion: str
+    subasta: Optional[int] = None
+    responsable: int
+    class Config:
+        from_attributes = True
+
+class ItemCatalogoCreate(BaseModel):
+    catalogo: int
+    producto: int
+    precioBase: Decimal
+    comision: Decimal
+
+class ItemCatalogoResponse(BaseModel):
+    identificador: int
+    catalogo: int
+    producto: int
+    precioBase: Decimal
+    comision: Decimal
+    subastado: str
+    class Config:
+        from_attributes = True
+
+class AsistenteCreate(BaseModel):
+    numeroPostor: int
+    cliente: int
+    subasta: int
+
+class AsistenteResponse(BaseModel):
+    identificador: int
+    numeroPostor: int
+    cliente: int
+    subasta: int
     class Config:
         from_attributes = True
 

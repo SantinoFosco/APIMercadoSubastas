@@ -123,8 +123,269 @@
       ]
     },
     {
+      "name": "Sala de Subastas",
+      "item": [
+        {
+          "name": "Listar Subastas",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/subastas/" }
+          }
+        },
+        {
+          "name": "Crear Subasta",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/subastas/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"2026-06-15\",\n  \"hora\": \"10:00:00\",\n  \"subastador\": 1,\n  \"ubicacion\": \"Salón Principal, Buenos Aires\",\n  \"capacidadAsistentes\": 200,\n  \"tieneDeposito\": \"si\",\n  \"seguridadPropia\": \"si\",\n  \"categoria\": \"comun\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Subasta",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/subastas/1" }
+          }
+        },
+        {
+          "name": "Crear Asistente",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/asistentes/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numeroPostor\": 1,\n  \"cliente\": 1,\n  \"subasta\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Asistente",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/asistentes/1" }
+          }
+        },
+        {
+          "name": "Obtener Subasta en Vivo",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/subasta/1/vivo" }
+          }
+        },
+        {
+          "name": "Pujar",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/pujar" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asistenteId\": 1,\n  \"itemId\": 1,\n  \"importe\": 15000.00\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Home y Catalogo",
+      "item": [
+        {
+          "name": "Crear Producto",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/productos/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcionCatalogo\": \"Reloj Patek Philippe Nautilus\",\n  \"descripcionCompleta\": \"Reloj de lujo suizo en acero inoxidable. Referencia 5711/1A-010. Movimiento automático Cal. 324 S C.\",\n  \"revisor\": 1,\n  \"duenio\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Producto",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/productos/1" }
+          }
+        },
+        {
+          "name": "Crear Foto",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/fotos/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Foto",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/fotos/1" }
+          }
+        },
+        {
+          "name": "Crear Producto Presentacion",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/productos-presentacion/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"producto\": 1,\n  \"titulo\": \"Patek Philippe Nautilus 5711\",\n  \"categoria\": \"Relojeria\",\n  \"procedencia\": \"Suiza\",\n  \"declaracionLegal\": \"si\",\n  \"estado\": \"publicado\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Producto Presentacion",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/productos-presentacion/1" }
+          }
+        },
+        {
+          "name": "Crear Catalogo",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/catalogos/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Cronógrafos de Lujo - Junio 2026\",\n  \"subasta\": 1,\n  \"responsable\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Catalogo",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/catalogos/1" }
+          }
+        },
+        {
+          "name": "Crear Item Catalogo",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/items-catalogo/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catalogo\": 1,\n  \"producto\": 1,\n  \"precioBase\": 12000.00,\n  \"comision\": 1200.00\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Item Catalogo",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/items-catalogo/1" }
+          }
+        },
+        {
+          "name": "Obtener Home",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/home?categoria=COMUN" }
+          }
+        },
+        {
+          "name": "Obtener Catalogo Subasta",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/subastas/1/catalogo" }
+          }
+        },
+        {
+          "name": "Obtener Detalle Producto",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/subastas/1/catalogo/1" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Compras",
+      "item": [
+        {
+          "name": "Obtener Compras",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/subasta/1/1/compras" }
+          }
+        },
+        {
+          "name": "Obtener Precio Total",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/subasta/1/1/compras/precio" }
+          }
+        },
+        {
+          "name": "Confirmar Envio",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/subasta/1/1/compras/envio?metodoEnvio=domicilio" }
+          }
+        },
+        {
+          "name": "Confirmar Pago",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/subasta/1/1/compras/pagar?metodoPagoId=1" }
+          }
+        }
+      ]
+    },
+    {
       "name": "Personas",
       "item": [
+        {
+          "name": "Crear Duenio",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/duenios/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificador\": 1,\n  \"numeroPais\": 1,\n  \"verificador\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Duenio",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/duenios/1" }
+          }
+        },
+        {
+          "name": "Crear Subastador",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/subastadores/" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificador\": 1,\n  \"matricula\": \"MAT-001\",\n  \"region\": \"Buenos Aires\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar Subastador",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/subastadores/1" }
+          }
+        },
         {
           "name": "Crear Sector",
           "request": {
