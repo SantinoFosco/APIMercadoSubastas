@@ -1,4 +1,5 @@
 from http.client import HTTPException
+from random import random
 
 import base64
 from datetime import datetime
@@ -47,8 +48,8 @@ def iniciar_registro(db: Session, request: schemas.RegistroIniciarRequest):
         db.rollback()
         raise e
     
-def verificar_registro(db: Session, mail: str):
-    persona = db.query(models.PersonaDetalle).filter(models.PersonaDetalle.mail == mail).first()
+def aprobar_registro(db: Session, request: schemas.RegistroVerificacionRequest):
+    persona = db.query(models.PersonaDetalle).filter(models.PersonaDetalle.mail == request.mail).first()
 
     if not persona:
         return schemas.RegistroVerificarResponse(mensaje="Correo no registrado")
@@ -60,7 +61,26 @@ def verificar_registro(db: Session, mail: str):
         nuevo_cliente = models.Cliente(
             numeroPais=persona.pais,
             admitido="si",
-            categoria=categorias[0]
+            categoria=random.choice(categorias),
+            verificador=request.verificador
+        )
+
+        db.add(nuevo_cliente)
+        db.commit()
+
+        return schemas.RegistroVerificarResponse(mensaje="Registro verificado exitosamente")
+    
+def desaprobar_registro(db: Session, request: schemas.RegistroVerificacionRequest):
+    persona = db.query(models.PersonaDetalle).filter(models.PersonaDetalle.mail == request.mail).first()
+
+    if not persona:
+        return schemas.RegistroVerificarResponse(mensaje="Correo no registrado")
+
+    else:
+        nuevo_cliente = models.Cliente(
+            numeroPais=persona.pais,
+            admitido="no",
+            verificador=request.verificador
         )
 
         db.add(nuevo_cliente)
@@ -1004,12 +1024,7 @@ def get_paises(db: Session):
 
 # Obtener un país por su número (ID)
 def get_pais(db: Session, numero: int):
-    db_pais = db.query(models.Pais).filter(models.Pais.numero == numero).first()
-
-    if not db_pais:
-        raise HTTPException(status_code=404, detail="País no encontrado")
-    
-    return db_pais
+    return db.query(models.Pais).filter(models.Pais.numero == numero).first()
 
 # Crear un nuevo país
 def create_pais(db: Session, pais: schemas.PaisCreate):
@@ -1023,9 +1038,6 @@ def create_pais(db: Session, pais: schemas.PaisCreate):
 def delete_pais(db: Session, numero: int):
     db_pais = db.query(models.Pais).filter(models.Pais.numero == numero).first()
     
-    if not db_pais:
-        raise HTTPException(status_code=404, detail="País no encontrado")
-
     db.delete(db_pais)
     db.commit()
 
